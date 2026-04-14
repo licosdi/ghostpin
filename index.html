@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="GhostPin"/>
+  <meta name="theme-color" content="#16161e"/>
+  <title>GhostPin - Change Your Location Instantly</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e0e0e0;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-left: max(24px, env(safe-area-inset-left));
+      padding-right: max(24px, env(safe-area-inset-right));
+      background: #16161e;
+      border-bottom: 1px solid #2a2a3a;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      fill: #6c63ff;
+    }
+
+    .logo span { color: #6c63ff; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: #888;
+      background: #1e1e2e;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #2a2a3a;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3d3d4d;
+      transition: background 0.3s;
+    }
+
+    .status-dot.active { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+
+    /* ── Main layout ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 320px;
+      background: #16161e;
+      border-right: 1px solid #2a2a3a;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 20px;
+      border-bottom: 1px solid #2a2a3a;
+    }
+
+    .sidebar-section h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    /* Search */
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      stroke: #555;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 11px 12px 11px 38px;
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #search-input:focus { border-color: #6c63ff; }
+    #search-input::placeholder { color: #444; }
+
+    #suggestions {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 2000;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .suggestion-item {
+      padding: 10px 14px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      border-bottom: 1px solid #2a2a3a;
+      transition: background 0.15s;
+    }
+
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: #2a2a3a; }
+
+    /* Coords display */
+    .coords-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .coord-box {
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+
+    .coord-box label {
+      display: block;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #555;
+      margin-bottom: 4px;
+    }
+
+    .coord-box input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #b0b0c8;
+      font-size: 0.88rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      outline: none;
+    }
+
+    .coord-box input:read-only { cursor: default; }
+
+    /* Selected location card */
+    .location-card {
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 14px;
+      display: none;
+    }
+
+    .location-card.visible { display: block; }
+
+    .location-card .place-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    .location-card .place-sub {
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: #6c63ff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-primary:hover { background: #5a52e0; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #333; color: #555; cursor: not-allowed; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      color: #888;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: #555; color: #bbb; }
+
+
+    /* ── Map ── */
+    #map {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+      height: 100%;
+    }
+
+    /* ── Mobile drawer ── */
+    @media (max-width: 768px) {
+      .main {
+        flex-direction: column;
+        position: relative;
+      }
+
+      .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 75vh;
+        border-right: none;
+        border-top: 1px solid #2a2a3a;
+        border-radius: 20px 20px 0 0;
+        z-index: 500;
+        transform: translateY(calc(75vh - 72px));
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        padding-bottom: env(safe-area-inset-bottom);
+        flex-direction: column;
+        will-change: transform;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .sidebar.open {
+        transform: translateY(0);
+      }
+
+      /* Drag handle */
+      .sidebar::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: #3a3a4a;
+        border-radius: 2px;
+        margin: 10px auto 4px;
+        flex-shrink: 0;
+      }
+
+      /* Collapsed peek — show just the first section header + handle */
+      .drawer-peek {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 20px 12px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .drawer-peek-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .drawer-peek-chevron {
+        color: #555;
+        font-size: 1.1rem;
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open .drawer-peek-chevron {
+        transform: rotate(180deg);
+      }
+
+      #map {
+        height: 100dvh;
+        width: 100%;
+      }
+
+      /* Bigger touch targets on mobile */
+      .device-item { padding: 13px 14px; }
+      .fav-item { padding: 12px 14px; }
+      .btn-primary { padding: 15px; font-size: 1rem; }
+      .btn-secondary { padding: 13px; }
+      .sidebar-section { padding: 16px 18px; }
+      .sidebar-section h3 { font-size: 0.68rem; }
+
+      /* Leaflet zoom controls — move above drawer */
+      .leaflet-control-zoom {
+        margin-bottom: 90px !important;
+      }
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e1e2e;
+      border: 1px solid #6c63ff55;
+      color: #e0e0e0;
+      padding: 12px 22px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Leaflet overrides */
+    .leaflet-container { background: #0f0f13; }
+
+    .leaflet-tile-pane { filter: none; }
+
+    .custom-marker {
+      width: 32px;
+      height: 32px;
+      background: #6c63ff;
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 4px 14px rgba(108,99,255,0.5);
+    }
+
+    .pulse-ring {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(108,99,255,0.25);
+      top: -8px;
+      left: -8px;
+      animation: pulse 2s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    .leaflet-control-zoom {
+      border: 1px solid #2a2a3a !important;
+      background: #16161e !important;
+    }
+
+    .leaflet-control-zoom a {
+      color: #888 !important;
+      background: #16161e !important;
+      border-bottom: 1px solid #2a2a3a !important;
+    }
+
+    .leaflet-control-zoom a:hover { background: #1e1e2e !important; color: #ccc !important; }
+
+    /* Device list */
+    .device-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .device-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 11px;
+      background: #1e1e2e;
+      border: 1.5px solid #2a2a3a;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .device-item:hover { border-color: #6c63ff44; background: #22223a; }
+    .device-item.selected { border-color: #6c63ff; }
+
+    .device-icon {
+      width: 32px;
+      height: 32px;
+      background: #2a2a3a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .device-icon svg { width: 17px; height: 17px; fill: #666; }
+    .device-item.selected .device-icon svg { fill: #6c63ff; }
+
+    .device-info { flex: 1; min-width: 0; }
+
+    .device-name {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .device-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+    }
+
+    .dev-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dev-dot.connected { background: #4ade80; box-shadow: 0 0 4px #4ade8088; }
+    .dev-dot.disconnected { background: #444; }
+
+    .device-meta-text {
+      font-size: 0.7rem;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .device-item.selected .device-meta-text { color: #888; }
+
+    .device-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #2a2a3a;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .device-item.selected .device-check { background: #6c63ff; border-color: #6c63ff; }
+    .device-check svg { width: 10px; height: 10px; stroke: #fff; stroke-width: 2.5; display: none; }
+    .device-item.selected .device-check svg { display: block; }
+
+    .scan-btn {
+      width: 100%;
+      padding: 9px;
+      background: transparent;
+      border: 1.5px dashed #2a2a3a;
+      border-radius: 10px;
+      color: #555;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .scan-btn:hover { border-color: #6c63ff55; color: #888; }
+    .scan-btn.scanning { border-color: #6c63ff; color: #6c63ff; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-btn.scanning svg { animation: spin 1s linear infinite; }
+
+    .device-section-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #444;
+      margin: 10px 0 6px;
+    }
+
+    .device-item.this-device { border-color: #6c63ff33; background: #1a1a2e; }
+    .this-device-badge {
+      font-size: 0.62rem;
+      background: #6c63ff22;
+      color: #6c63ff;
+      border: 1px solid #6c63ff44;
+      border-radius: 4px;
+      padding: 1px 5px;
+      flex-shrink: 0;
+    }
+
+    /* Favourites */
+    .fav-empty {
+      font-size: 0.78rem;
+      color: #444;
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .fav-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .fav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 11px;
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .fav-item:hover { border-color: #6c63ff44; background: #22223a; }
+
+    .fav-icon {
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .fav-info { flex: 1; min-width: 0; }
+    .fav-name { font-size: 0.83rem; font-weight: 600; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-coords { font-size: 0.7rem; color: #555; font-family: monospace; margin-top: 1px; }
+
+    .fav-remove {
+      background: none;
+      border: none;
+      color: #444;
+      cursor: pointer;
+      padding: 2px;
+      font-size: 1rem;
+      line-height: 1;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .fav-remove:hover { color: #e05555; }
+
+    /* Star button on location card */
+    .location-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      flex-shrink: 0;
+      color: #444;
+      transition: color 0.2s, transform 0.15s;
+      line-height: 1;
+    }
+
+    .star-btn:hover { color: #f5c842; transform: scale(1.15); }
+    .star-btn.starred { color: #f5c842; }
+
+    /* Save modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 14px;
+      padding: 22px 24px;
+      width: 300px;
+      transform: translateY(10px);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    .modal p {
+      font-size: 0.78rem;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #16161e;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 0.88rem;
+      outline: none;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .modal input:focus { border-color: #6c63ff; }
+
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button { flex: 1; padding: 9px; border-radius: 8px; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .modal-cancel { background: #2a2a3a; color: #888; }
+    .modal-cancel:hover { background: #333; color: #ccc; }
+    .modal-save { background: #6c63ff; color: #fff; }
+    .modal-save:hover { background: #5a52e0; }
+
+    .pair-device-preview {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #16161e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+
+    .pair-device-preview .device-icon {
+      width: 32px; height: 32px; background: #2a2a3a;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .pair-device-preview .device-icon svg { width: 17px; height: 17px; fill: #888; }
+    .pair-device-preview .device-name { font-size: 0.88rem; font-weight: 600; color: #ccc; }
+    .pair-device-preview .device-meta-text { font-size: 0.72rem; color: #555; }
+
+    /* Fav rename inline */
+    .fav-name[contenteditable="true"] {
+      outline: none;
+      border-bottom: 1px solid #6c63ff;
+      padding-bottom: 1px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #16161e; }
+    ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+
+    /* ── Auth screen ── */
+    #auth-screen {
+      position: fixed;
+      inset: 0;
+      background: #0f0f13;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: max(24px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    #auth-screen.hidden { display: none; }
+
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-logo svg { width: 32px; height: 32px; fill: #6c63ff; }
+    .auth-logo span { color: #6c63ff; }
+
+    .auth-tagline {
+      font-size: 0.82rem;
+      color: #555;
+      margin-bottom: 36px;
+      letter-spacing: 0.3px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 360px;
+      background: #16161e;
+      border: 1px solid #2a2a3a;
+      border-radius: 18px;
+      padding: 28px 24px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: #1e1e2e;
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 24px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      background: transparent;
+      color: #555;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab.active {
+      background: #6c63ff;
+      color: #fff;
+    }
+
+    .auth-field {
+      margin-bottom: 14px;
+    }
+
+    .auth-field label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .auth-field input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .auth-field input:focus { border-color: #6c63ff; }
+    .auth-field input::placeholder { color: #3a3a4a; }
+
+    .auth-field input.error { border-color: #e05555; }
+
+    .auth-error {
+      font-size: 0.75rem;
+      color: #e05555;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .auth-error.visible { display: block; }
+
+    .auth-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .auth-remember {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+      color: #666;
+      cursor: pointer;
+    }
+
+    .auth-remember input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: #6c63ff;
+      cursor: pointer;
+    }
+
+    .auth-forgot {
+      font-size: 0.8rem;
+      color: #6c63ff;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .auth-submit {
+      width: 100%;
+      padding: 14px;
+      background: #6c63ff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-bottom: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    .auth-submit:hover { background: #5a52e0; }
+    .auth-submit:active { transform: scale(0.98); }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .auth-divider hr { flex: 1; border: none; border-top: 1px solid #2a2a3a; }
+    .auth-divider span { font-size: 0.72rem; color: #444; white-space: nowrap; }
+
+    .auth-social {
+      display: flex;
+      gap: 10px;
+    }
+
+    .auth-social-btn {
+      flex: 1;
+      padding: 11px;
+      background: #1e1e2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      color: #888;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+
+    .auth-social-btn:hover { border-color: #6c63ff44; color: #ccc; background: #22223a; }
+
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div class="auth-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+    Ghost<span>Pin</span>
+  </div>
+  <div class="auth-tagline">Change your location instantly</div>
+
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login">Log in</button>
+      <button class="auth-tab" id="tab-signup">Sign up</button>
+    </div>
+
+    <!-- Login form -->
+    <div class="auth-form active" id="form-login">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+        <div class="auth-error" id="login-email-err">Please enter a valid email.</div>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+        <div class="auth-error" id="login-pass-err">Password must be at least 6 characters.</div>
+      </div>
+      <div class="auth-row">
+        <label class="auth-remember">
+          <input type="checkbox" id="remember-me" checked/>
+          Remember me
+        </label>
+        <button class="auth-forgot" type="button">Forgot password?</button>
+      </div>
+      <button class="auth-submit" id="login-submit">Log in</button>
+      <div class="auth-divider"><hr/><span>or continue with</span><hr/></div>
+      <div class="auth-social">
+        <button class="auth-social-btn" id="apple-login">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Apple
+        </button>
+        <button class="auth-social-btn" id="google-login">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google
+        </button>
+      </div>
+    </div>
+
+    <!-- Signup form -->
+    <div class="auth-form" id="form-signup">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"/>
+        <div class="auth-error" id="signup-email-err">Please enter a valid email.</div>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="••••••••" autocomplete="new-password"/>
+        <div class="auth-error" id="signup-pass-err">Password must be at least 6 characters.</div>
+      </div>
+      <div class="auth-field" style="margin-bottom:20px;">
+        <label>Confirm password</label>
+        <input type="password" id="signup-confirm" placeholder="••••••••" autocomplete="new-password"/>
+        <div class="auth-error" id="signup-confirm-err">Passwords do not match.</div>
+      </div>
+      <button class="auth-submit" id="signup-submit">Create account</button>
+      <div class="auth-divider"><hr/><span>or continue with</span><hr/></div>
+      <div class="auth-social">
+        <button class="auth-social-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Apple
+        </button>
+        <button class="auth-social-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+    Ghost<span>Pin</span>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">No location set</span>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="drawer-peek" id="drawer-peek">
+      <span class="drawer-peek-label">Controls</span>
+      <span class="drawer-peek-chevron">⌃</span>
+    </div>
+
+    <!-- Devices -->
+    <div class="sidebar-section">
+      <h3>Devices</h3>
+      <div class="device-list" id="device-list"></div>
+      <button class="scan-btn" id="scan-btn" style="margin-top:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" id="scan-icon"><path d="M8.56 2.9A7 7 0 0 1 19 9v4"/><path d="M19 13a7 7 0 0 1-7 7 7 7 0 0 1-4.68-1.79"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+        <span id="scan-label">Scan for nearby devices</span>
+      </button>
+    </div>
+
+    <!-- Favourites -->
+    <div class="sidebar-section">
+      <h3>Favourites</h3>
+      <div id="fav-list-wrap"></div>
+    </div>
+
+    <!-- Search -->
+    <div class="sidebar-section">
+      <h3>Search Location</h3>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search city, address, coordinates…"/>
+        <div id="suggestions"></div>
+      </div>
+    </div>
+
+    <!-- Coordinates -->
+    <div class="sidebar-section">
+      <h3>Coordinates</h3>
+      <div class="coords-grid">
+        <div class="coord-box">
+          <label>Latitude</label>
+          <input type="text" id="lat-display" value="—" readonly/>
+        </div>
+        <div class="coord-box">
+          <label>Longitude</label>
+          <input type="text" id="lng-display" value="—" readonly/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Location -->
+    <div class="sidebar-section">
+      <h3>Selected Location</h3>
+      <div class="location-card" id="location-card">
+        <div class="location-card-header">
+          <div>
+            <div class="place-name" id="place-name">—</div>
+            <div class="place-sub" id="place-sub">—</div>
+          </div>
+          <button class="star-btn" id="star-btn" title="Save to favourites">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-primary" id="set-btn" disabled>Set Virtual Location</button>
+        <button class="btn-secondary" id="reset-btn">Reset to Real Location</button>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+</div>
+
+<!-- Pair Device Modal -->
+<div class="modal-overlay" id="pair-modal">
+  <div class="modal">
+    <h4>Connect to device?</h4>
+    <p id="pair-modal-desc">Make sure you own this device before connecting.</p>
+    <div class="pair-device-preview" id="pair-device-preview"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="pair-cancel">Cancel</button>
+      <button class="modal-save" id="pair-confirm">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save Favourite Modal -->
+<div class="modal-overlay" id="fav-modal">
+  <div class="modal">
+    <h4>Save to Favourites</h4>
+    <p>Give this location a name</p>
+    <input type="text" id="fav-name-input" placeholder="e.g. Home, Office, Holiday…" maxlength="40"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-save" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // ── Auth ──
+  const authScreen = document.getElementById('auth-screen');
+
+  function isLoggedIn() {
+    return !!localStorage.getItem('ghostpin_user');
+  }
+
+  function enterApp() {
+    authScreen.classList.add('hidden');
+    map.invalidateSize();
+  }
+
+  if (isLoggedIn()) enterApp();
+
+  // Tab switching
+  document.getElementById('tab-login').addEventListener('click', () => {
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-signup').classList.remove('active');
+    document.getElementById('form-login').classList.add('active');
+    document.getElementById('form-signup').classList.remove('active');
+  });
+
+  document.getElementById('tab-signup').addEventListener('click', () => {
+    document.getElementById('tab-signup').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('form-signup').classList.add('active');
+    document.getElementById('form-login').classList.remove('active');
+  });
+
+  function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+  function setError(inputId, errId, show) {
+    document.getElementById(inputId).classList.toggle('error', show);
+    document.getElementById(errId).classList.toggle('visible', show);
+    return show;
+  }
+
+  // Login
+  document.getElementById('login-submit').addEventListener('click', () => {
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-password').value;
+    let invalid = false;
+    if (setError('login-email', 'login-email-err', !validateEmail(email))) invalid = true;
+    if (setError('login-password', 'login-pass-err', pass.length < 6)) invalid = true;
+    if (invalid) return;
+
+    const users = JSON.parse(localStorage.getItem('ghostpin_users') || '{}');
+    if (!users[email] || users[email].password !== pass) {
+      setError('login-password', 'login-pass-err', true);
+      document.getElementById('login-pass-err').textContent = 'Incorrect email or password.';
+      return;
+    }
+    localStorage.setItem('ghostpin_user', JSON.stringify({ email, name: users[email].name }));
+    enterApp();
+  });
+
+  // Signup
+  document.getElementById('signup-submit').addEventListener('click', () => {
+    const email = document.getElementById('signup-email').value.trim();
+    const pass = document.getElementById('signup-password').value;
+    const confirm = document.getElementById('signup-confirm').value;
+    let invalid = false;
+    if (setError('signup-email', 'signup-email-err', !validateEmail(email))) invalid = true;
+    if (setError('signup-password', 'signup-pass-err', pass.length < 6)) invalid = true;
+    if (setError('signup-confirm', 'signup-confirm-err', pass !== confirm)) invalid = true;
+    if (invalid) return;
+
+    const users = JSON.parse(localStorage.getItem('ghostpin_users') || '{}');
+    users[email] = { password: pass };
+    localStorage.setItem('ghostpin_users', JSON.stringify(users));
+    localStorage.setItem('ghostpin_user', JSON.stringify({ email }));
+    enterApp();
+  });
+
+  // Social (demo)
+  document.querySelectorAll('.auth-social-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      localStorage.setItem('ghostpin_user', JSON.stringify({ email: 'social@ghostpin.app', name: 'User' }));
+      enterApp();
+    });
+  });
+
+  // Submit on Enter
+  ['login-email','login-password'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('login-submit').click();
+    });
+  });
+
+  ['signup-email','signup-password','signup-confirm'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('signup-submit').click();
+    });
+  });
+
+  // ── Device detection ──
+  function detectThisDevice() {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) {
+      const match = ua.match(/iPhone OS ([\d_]+)/);
+      const ver = match ? 'iOS ' + match[1].replace(/_/g, '.') : 'iOS';
+      return { name: 'This iPhone', meta: ver, type: 'ios' };
+    }
+    if (/iPad/.test(ua)) {
+      const match = ua.match(/OS ([\d_]+)/);
+      const ver = match ? 'iPadOS ' + match[1].replace(/_/g, '.') : 'iPadOS';
+      return { name: 'This iPad', meta: ver, type: 'ios' };
+    }
+    if (/Android/.test(ua)) {
+      const match = ua.match(/Android ([\d.]+)/);
+      const ver = match ? 'Android ' + match[1] : 'Android';
+      return { name: 'This device', meta: ver, type: 'android' };
+    }
+    return { name: 'This device', meta: 'macOS / Desktop', type: 'desktop' };
+  }
+
+  function iosIcon() {
+    return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.27.07 2.15.74 2.9.8.93-.19 1.82-.88 3-.95 1.5-.1 2.64.56 3.35 1.65-3.13 1.83-2.39 5.81.75 6.9-.56 1.56-1.3 3.1-2 4.46zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>`;
+  }
+
+  function androidIcon() {
+    return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zm-2.5-1C2.67 17 2 17.67 2 18.5v-9C2 8.67 2.67 8 3.5 8S5 8.67 5 9.5v9c0 .83-.67 1.5-1.5 1.5zm17 0c-.83 0-1.5-.67-1.5-1.5v-9c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v9c0 .83-.67 1.5-1.5 1.5zM15.53 2.16l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0 0 12 1c-.6 0-1.19.09-1.77.25L8.88.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.27 1.27C7.96 3.08 7 4.76 7 6.69h10c0-1.97-.97-3.65-1.47-4.53zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>`;
+  }
+
+  function desktopIcon() {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+  }
+
+  function getIcon(type) {
+    if (type === 'ios') return iosIcon();
+    if (type === 'android') return androidIcon();
+    return desktopIcon();
+  }
+
+  const thisDevice = detectThisDevice();
+  let selectedDeviceId = 'this';
+  let nearbyDevices = [];
+
+  function makeDeviceEl(d, id, isThis) {
+    const el = document.createElement('div');
+    el.className = 'device-item' + (id === selectedDeviceId ? ' selected' : '') + (isThis ? ' this-device' : '');
+    el.innerHTML = `
+      <div class="device-icon">${getIcon(d.type)}</div>
+      <div class="device-info">
+        <div class="device-name">${d.name}</div>
+        <div class="device-meta">
+          <div class="dev-dot connected"></div>
+          <span class="device-meta-text">${d.meta}</span>
+        </div>
+      </div>
+      ${isThis ? '<span class="this-device-badge">This device</span>' : ''}
+      <div class="device-check">
+        <svg viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3"/></svg>
+      </div>
+    `;
+    el.addEventListener('click', () => {
+      if (isThis) {
+        selectedDeviceId = id;
+        renderDevices();
+        showToast(`Using this device`);
+      } else {
+        openPairModal(d, id);
+      }
+    });
+    return el;
+  }
+
+  // ── Pair modal ──
+  let pendingPairId = null;
+  let pendingPairDevice = null;
+
+  function openPairModal(d, id) {
+    pendingPairId = id;
+    pendingPairDevice = d;
+    document.getElementById('pair-device-preview').innerHTML = `
+      <div class="device-icon">${getIcon(d.type)}</div>
+      <div class="device-info">
+        <div class="device-name">${d.name}</div>
+        <div class="device-meta-text">${d.meta}</div>
+      </div>
+    `;
+    document.getElementById('pair-modal').classList.add('open');
+  }
+
+  document.getElementById('pair-cancel').addEventListener('click', () => {
+    document.getElementById('pair-modal').classList.remove('open');
+  });
+
+  document.getElementById('pair-confirm').addEventListener('click', () => {
+    selectedDeviceId = pendingPairId;
+    document.getElementById('pair-modal').classList.remove('open');
+    renderDevices();
+    showToast(`Connected to ${pendingPairDevice.name}`);
+  });
+
+  document.getElementById('pair-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pair-modal'))
+      document.getElementById('pair-modal').classList.remove('open');
+  });
+
+  function renderDevices() {
+    const list = document.getElementById('device-list');
+    list.innerHTML = '';
+
+    // This device always first
+    list.appendChild(makeDeviceEl(thisDevice, 'this', true));
+
+    // Nearby devices
+    if (nearbyDevices.length) {
+      const label = document.createElement('div');
+      label.className = 'device-section-label';
+      label.textContent = 'Nearby via Bluetooth';
+      list.appendChild(label);
+      nearbyDevices.forEach((d, i) => {
+        list.appendChild(makeDeviceEl(d, 'nearby_' + i, false));
+      });
+    }
+  }
+
+  renderDevices();
+
+  // ── Bluetooth scan ──
+  let scanning = false;
+  const scanBtn = document.getElementById('scan-btn');
+  const scanLabel = document.getElementById('scan-label');
+
+  const MOCK_NEARBY = [
+    { name: "Liam's iPhone 15",   meta: 'iOS 17.4',      type: 'ios'     },
+    { name: "iPad Pro",           meta: 'iPadOS 17.2',   type: 'ios'     },
+    { name: "Galaxy S24 Ultra",   meta: 'Android 14',    type: 'android' },
+  ];
+
+  scanBtn.addEventListener('click', () => {
+    if (scanning) return;
+    scanning = true;
+    scanBtn.classList.add('scanning');
+    scanLabel.textContent = 'Scanning…';
+    nearbyDevices = [];
+    renderDevices();
+
+    // Reveal devices one by one
+    MOCK_NEARBY.forEach((d, i) => {
+      setTimeout(() => {
+        nearbyDevices.push(d);
+        renderDevices();
+        if (i === MOCK_NEARBY.length - 1) {
+          scanning = false;
+          scanBtn.classList.remove('scanning');
+          scanLabel.textContent = 'Scan again';
+          showToast(`Found ${MOCK_NEARBY.length} nearby devices`);
+        }
+      }, 800 + i * 600);
+    });
+  });
+
+  // ── State ──
+  let selectedLat = null;
+  let selectedLng = null;
+  let selectedName = '';
+  let marker = null;
+  let searchTimeout = null;
+  let activeLocation = null;
+
+
+  // ── Init map ──
+  const map = L.map('map', { zoomControl: true, worldCopyJump: false, minZoom: 2 }).setView([20, 0], 2);
+  setTimeout(() => map.invalidateSize(), 100);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+    noWrap: true,
+  }).addTo(map);
+
+  // ── Custom marker icon ──
+  function makeIcon() {
+    return L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:32px;">
+               <div class="pulse-ring"></div>
+               <div class="custom-marker"></div>
+             </div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    });
+  }
+
+  // ── Place marker on map ──
+  function placeMarker(lat, lng) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng], { icon: makeIcon() }).addTo(map);
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 10), { duration: 1.2 });
+  }
+
+  // ── Update sidebar coords ──
+  function updateCoords(lat, lng) {
+    document.getElementById('lat-display').value = lat.toFixed(6);
+    document.getElementById('lng-display').value = lng.toFixed(6);
+    selectedLat = lat;
+    selectedLng = lng;
+    document.getElementById('set-btn').disabled = false;
+  }
+
+  // ── Update location card ──
+  function updateCard(name, sub) {
+    const card = document.getElementById('location-card');
+    document.getElementById('place-name').textContent = name || 'Unknown';
+    document.getElementById('place-sub').textContent = sub || '';
+    card.classList.add('visible');
+    selectedName = name;
+    updateStarBtn();
+  }
+
+  // ── Map click ──
+  map.on('click', async (e) => {
+    const { lat, lng } = e.latlng;
+    placeMarker(lat, lng);
+    updateCoords(lat, lng);
+    // Reverse geocode
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
+      const data = await res.json();
+      const name = data.address?.city || data.address?.town || data.address?.village || data.address?.county || 'Unknown';
+      const country = data.address?.country || '';
+      updateCard(name, country);
+    } catch {
+      updateCard(`${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'Custom coordinates');
+    }
+  });
+
+  // ── Search ──
+  const searchInput = document.getElementById('search-input');
+  const suggestionsBox = document.getElementById('suggestions');
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const q = searchInput.value.trim();
+    if (q.length < 3) { suggestionsBox.style.display = 'none'; return; }
+    searchTimeout = setTimeout(() => doSearch(q), 350);
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { suggestionsBox.style.display = 'none'; }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrap')) suggestionsBox.style.display = 'none';
+  });
+
+  async function doSearch(q) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=en`);
+      const data = await res.json();
+      renderSuggestions(data);
+    } catch { suggestionsBox.style.display = 'none'; }
+  }
+
+  function renderSuggestions(results) {
+    if (!results.length) { suggestionsBox.style.display = 'none'; return; }
+    suggestionsBox.innerHTML = '';
+    results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'suggestion-item';
+      div.textContent = r.display_name;
+      div.addEventListener('click', () => {
+        selectResult(parseFloat(r.lat), parseFloat(r.lon), r.display_name);
+        searchInput.value = r.display_name.split(',')[0];
+        suggestionsBox.style.display = 'none';
+      });
+      suggestionsBox.appendChild(div);
+    });
+    suggestionsBox.style.display = 'block';
+  }
+
+  function selectResult(lat, lng, displayName) {
+    placeMarker(lat, lng);
+    updateCoords(lat, lng);
+    const parts = displayName.split(',');
+    updateCard(parts[0].trim(), parts.slice(1, 3).join(',').trim());
+  }
+
+
+  // ── Set / Reset buttons ──
+  document.getElementById('set-btn').addEventListener('click', () => {
+    if (selectedLat === null) return;
+    activeLocation = { lat: selectedLat, lng: selectedLng, name: selectedName };
+    document.getElementById('status-dot').classList.add('active');
+    document.getElementById('status-text').textContent = selectedName || 'Custom location';
+    showToast(`Virtual location set to ${selectedName || 'selected coordinates'}`);
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    activeLocation = null;
+    if (marker) { map.removeLayer(marker); marker = null; }
+    document.getElementById('lat-display').value = '—';
+    document.getElementById('lng-display').value = '—';
+    document.getElementById('location-card').classList.remove('visible');
+    document.getElementById('set-btn').disabled = true;
+    document.getElementById('status-dot').classList.remove('active');
+    document.getElementById('status-text').textContent = 'No location set';
+    selectedLat = null; selectedLng = null;
+    showToast('Location reset to real position');
+  });
+
+  // ── Favourites ──
+  let favourites = JSON.parse(localStorage.getItem('ghostpin_favs') || '[]');
+
+  function saveFavs() {
+    localStorage.setItem('ghostpin_favs', JSON.stringify(favourites));
+  }
+
+  function renderFavs() {
+    const wrap = document.getElementById('fav-list-wrap');
+    if (!favourites.length) {
+      wrap.innerHTML = '<div class="fav-empty">No favourites yet — star a location to save it</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="fav-list" id="fav-list"></div>';
+    const list = document.getElementById('fav-list');
+    favourites.forEach((f, i) => {
+      const el = document.createElement('div');
+      el.className = 'fav-item';
+      el.innerHTML = `
+        <div class="fav-icon">⭐</div>
+        <div class="fav-info">
+          <div class="fav-name" title="Double-click to rename">${f.name}</div>
+          <div class="fav-coords">${f.lat.toFixed(4)}, ${f.lng.toFixed(4)}</div>
+        </div>
+        <button class="fav-remove" title="Remove">×</button>
+      `;
+
+      // click to jump to location
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.fav-remove') || e.target.closest('.fav-name[contenteditable]')) return;
+        selectResult(f.lat, f.lng, f.name);
+      });
+
+      // double-click name to rename inline
+      const nameEl = el.querySelector('.fav-name');
+      nameEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        nameEl.contentEditable = 'true';
+        nameEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(nameEl);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+      });
+      nameEl.addEventListener('blur', () => {
+        const newName = nameEl.textContent.trim();
+        if (newName) { favourites[i].name = newName; saveFavs(); }
+        else { nameEl.textContent = f.name; }
+        nameEl.contentEditable = 'false';
+        updateStarBtn();
+      });
+      nameEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
+        if (e.key === 'Escape') { nameEl.textContent = f.name; nameEl.blur(); }
+      });
+
+      // remove
+      el.querySelector('.fav-remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        favourites.splice(i, 1);
+        saveFavs();
+        renderFavs();
+        updateStarBtn();
+      });
+
+      list.appendChild(el);
+    });
+  }
+
+  function isStarred() {
+    return selectedLat !== null && favourites.some(f => f.lat === selectedLat && f.lng === selectedLng);
+  }
+
+  function updateStarBtn() {
+    const btn = document.getElementById('star-btn');
+    btn.classList.toggle('starred', isStarred());
+  }
+
+  // ── Save modal ──
+  const favModal = document.getElementById('fav-modal');
+  const favNameInput = document.getElementById('fav-name-input');
+
+  function openFavModal() {
+    favNameInput.value = selectedName || '';
+    favModal.classList.add('open');
+    setTimeout(() => favNameInput.focus(), 150);
+  }
+
+  function closeFavModal() {
+    favModal.classList.remove('open');
+  }
+
+  document.getElementById('modal-cancel').addEventListener('click', closeFavModal);
+  favModal.addEventListener('click', (e) => { if (e.target === favModal) closeFavModal(); });
+
+  document.getElementById('modal-save').addEventListener('click', () => {
+    const name = favNameInput.value.trim() || selectedName || `${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+    favourites.push({ name, lat: selectedLat, lng: selectedLng });
+    saveFavs();
+    renderFavs();
+    updateStarBtn();
+    closeFavModal();
+    showToast(`Saved "${name}" to favourites`);
+    // Scroll favourites section into view and flash it
+    const favSection = document.getElementById('fav-list-wrap').closest('.sidebar-section');
+    favSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    favSection.style.transition = 'background 0.2s';
+    favSection.style.background = '#2a2a4a';
+    setTimeout(() => { favSection.style.background = ''; }, 600);
+  });
+
+  favNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('modal-save').click();
+    if (e.key === 'Escape') closeFavModal();
+  });
+
+  document.getElementById('star-btn').addEventListener('click', () => {
+    if (selectedLat === null) return;
+    if (isStarred()) {
+      favourites = favourites.filter(f => !(f.lat === selectedLat && f.lng === selectedLng));
+      saveFavs();
+      renderFavs();
+      updateStarBtn();
+      showToast('Removed from favourites');
+    } else {
+      openFavModal();
+    }
+  });
+
+  renderFavs();
+
+  // ── Mobile drawer ──
+  const sidebar = document.getElementById('sidebar');
+  const drawerPeek = document.getElementById('drawer-peek');
+
+  function isMobile() { return window.innerWidth <= 768; }
+
+  drawerPeek.addEventListener('click', () => {
+    if (!isMobile()) return;
+    sidebar.classList.toggle('open');
+    setTimeout(() => map.invalidateSize(), 370);
+  });
+
+  // Close drawer when tapping the map on mobile
+  document.getElementById('map').addEventListener('click', () => {
+    if (isMobile()) sidebar.classList.remove('open');
+  });
+
+  window.addEventListener('resize', () => map.invalidateSize());
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
