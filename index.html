@@ -864,7 +864,125 @@
       cursor: pointer;
     }
 
+    /* OTP phone/email tabs */
+    .otp-type-tabs {
+      display: flex;
+      background: #2c2c2e;
+      border-radius: 10px;
+      padding: 3px;
+      margin: 16px 24px 0;
+    }
+    .otp-type-tab {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      background: transparent;
+      color: #636366;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .otp-type-tab.active { background: #3a3a3c; color: #fff; }
+
+    /* Country picker */
+    .otp-phone-wrap { padding: 12px 24px 0; position: relative; }
+    .otp-country-row { display: flex; gap: 8px; }
+    .otp-country-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      background: #2c2c2e;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      height: 46px;
+      flex-shrink: 0;
+    }
+    .otp-country-btn svg { opacity: 0.5; }
+    .otp-phone-wrap input[type="tel"] {
+      flex: 1;
+      padding: 12px 14px;
+      background: #2c2c2e;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      -webkit-appearance: none;
+      min-width: 0;
+    }
+    .otp-phone-wrap input[type="tel"]::placeholder { color: #636366; }
+
+    /* Country dropdown */
+    .otp-country-dropdown {
+      position: absolute;
+      left: 24px; right: 24px;
+      top: 66px;
+      background: #2c2c2e;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      z-index: 100;
+      display: none;
+      overflow: hidden;
+    }
+    .otp-country-dropdown.open { display: block; }
+    .otp-country-search-wrap { padding: 10px 12px; border-bottom: 1px solid #3a3a3c; }
+    .otp-country-search-wrap input {
+      width: 100%;
+      background: #3a3a3c;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .otp-country-search-wrap input::placeholder { color: #636366; }
+    .otp-country-list { max-height: 200px; overflow-y: auto; }
+    .otp-country-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: #e0e0e0;
+      transition: background 0.1s;
+    }
+    .otp-country-item:hover, .otp-country-item.active { background: #3a3a3c; }
+    .otp-country-item-flag { font-size: 1.2rem; line-height: 1; }
+    .otp-country-item-name { flex: 1; }
+    .otp-country-item-dial { color: #636366; font-size: 0.8rem; }
+
+    /* Email wrap */
+    .otp-email-wrap { padding: 12px 24px 0; }
+    .otp-email-wrap input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #2c2c2e;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .otp-email-wrap input::placeholder { color: #636366; }
+
     /* OTP digit boxes */
+    .otp-boxes-wrap {
+      padding: 16px 24px 0;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
     .otp-digit {
       width: 44px;
       height: 54px;
@@ -880,6 +998,29 @@
       transition: border-color 0.2s;
     }
     .otp-digit:focus { border-color: #0a84ff; }
+
+    /* Timer row */
+    .otp-timer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px 0;
+    }
+    .otp-timer-text { font-size: 0.78rem; color: #636366; }
+    #otp-timer { color: #0a84ff; font-weight: 600; }
+    #otp-timer.expired { color: #e05555; }
+    .otp-resend-btn {
+      font-size: 0.82rem;
+      color: #0a84ff;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-weight: 600;
+      opacity: 0.35;
+      transition: opacity 0.25s;
+    }
+    .otp-resend-btn:not([disabled]) { opacity: 1; cursor: pointer; }
 
     .apple-sheet-step { display: none; }
     .apple-sheet-step.active { display: block; }
@@ -920,7 +1061,8 @@
     #auth-screen {
       position: fixed;
       inset: 0;
-      background: #0f0f13;
+      background: #09090e;
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(108,99,255,0.14) 0%, transparent 65%);
       z-index: 9999;
       display: flex;
       flex-direction: column;
@@ -961,6 +1103,7 @@
       border: 1px solid #2a2a3a;
       border-radius: 18px;
       padding: 28px 24px;
+      box-shadow: 0 0 0 1px rgba(108,99,255,0.1), 0 24px 64px rgba(0,0,0,0.5);
     }
 
     .auth-tabs {
@@ -1287,16 +1430,43 @@
   <div class="apple-sheet">
     <div class="apple-sheet-handle"></div>
 
-    <!-- Step 1: Enter phone or email -->
+    <!-- Step 1: Contact input -->
     <div class="apple-sheet-step active" id="otp-step-1">
       <div class="apple-sheet-header">
-        <div class="apple-sheet-title">Enter your phone or email</div>
-        <div class="apple-sheet-sub">We'll send you a 6-digit code to sign in</div>
+        <div class="apple-sheet-title">Sign in to GhostPin</div>
+        <div class="apple-sheet-sub">Enter your phone or email to receive a 6-digit code</div>
       </div>
-      <div class="apple-email-input-wrap">
-        <input type="text" id="otp-contact-input" placeholder="Phone number or email" autocomplete="email" inputmode="email"/>
+
+      <!-- Phone / Email tab switcher -->
+      <div class="otp-type-tabs">
+        <button class="otp-type-tab active" id="otp-tab-phone">Phone</button>
+        <button class="otp-type-tab" id="otp-tab-email">Email</button>
       </div>
-      <div class="apple-sheet-actions">
+
+      <!-- Phone input with country picker -->
+      <div class="otp-phone-wrap" id="otp-phone-wrap">
+        <div class="otp-country-row">
+          <button class="otp-country-btn" id="otp-country-btn" type="button">
+            <span id="otp-flag">🇺🇸</span>
+            <span id="otp-dial">+1</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="tel" id="otp-phone-input" placeholder="Phone number" inputmode="tel" autocomplete="tel"/>
+        </div>
+        <div class="otp-country-dropdown" id="otp-country-dropdown">
+          <div class="otp-country-search-wrap">
+            <input type="text" id="otp-country-search" placeholder="Search country…" autocomplete="off"/>
+          </div>
+          <div class="otp-country-list" id="otp-country-list"></div>
+        </div>
+      </div>
+
+      <!-- Email input -->
+      <div class="otp-email-wrap" id="otp-email-wrap" style="display:none;">
+        <input type="email" id="otp-email-input" placeholder="Email address" autocomplete="email" inputmode="email"/>
+      </div>
+
+      <div class="apple-sheet-actions" style="margin-top:20px;">
         <button class="apple-btn-primary" id="otp-send-btn">Send code</button>
         <button class="apple-btn-cancel" id="otp-cancel-btn">Cancel</button>
       </div>
@@ -1306,11 +1476,12 @@
     <div class="apple-sheet-step" id="otp-step-2">
       <div class="apple-sheet-header">
         <div class="apple-sheet-title">Enter the code</div>
-        <div class="apple-sheet-sub" id="otp-sent-label">Code sent to your phone or email</div>
+        <div class="apple-sheet-sub" id="otp-sent-label">Code sent to your contact</div>
       </div>
-      <div style="padding: 4px 24px 0; display:flex; gap:10px; justify-content:center;" id="otp-boxes"></div>
-      <div style="text-align:center; margin-top:14px;">
-        <button class="apple-btn-cancel" id="otp-resend-btn" style="background:none;color:#0a84ff;font-size:0.82rem;padding:0;width:auto;">Resend code</button>
+      <div class="otp-boxes-wrap" id="otp-boxes"></div>
+      <div class="otp-timer-row">
+        <span class="otp-timer-text">Expires in <span id="otp-timer">2:00</span></span>
+        <button class="otp-resend-btn" id="otp-resend-btn" disabled>Resend code</button>
       </div>
       <div class="apple-sheet-actions" style="margin-top:16px;">
         <button class="apple-btn-primary" id="otp-verify-btn">Verify</button>
@@ -1428,9 +1599,129 @@
   });
 
   // ── OTP Sign In ──
+  const COUNTRIES = [
+    { flag:'🇦🇺', name:'Australia', dial:'+61' },
+    { flag:'🇦🇹', name:'Austria', dial:'+43' },
+    { flag:'🇧🇪', name:'Belgium', dial:'+32' },
+    { flag:'🇧🇷', name:'Brazil', dial:'+55' },
+    { flag:'🇨🇦', name:'Canada', dial:'+1' },
+    { flag:'🇨🇳', name:'China', dial:'+86' },
+    { flag:'🇨🇿', name:'Czech Republic', dial:'+420' },
+    { flag:'🇩🇰', name:'Denmark', dial:'+45' },
+    { flag:'🇪🇬', name:'Egypt', dial:'+20' },
+    { flag:'🇫🇮', name:'Finland', dial:'+358' },
+    { flag:'🇫🇷', name:'France', dial:'+33' },
+    { flag:'🇩🇪', name:'Germany', dial:'+49' },
+    { flag:'🇬🇷', name:'Greece', dial:'+30' },
+    { flag:'🇭🇰', name:'Hong Kong', dial:'+852' },
+    { flag:'🇭🇺', name:'Hungary', dial:'+36' },
+    { flag:'🇮🇳', name:'India', dial:'+91' },
+    { flag:'🇮🇩', name:'Indonesia', dial:'+62' },
+    { flag:'🇮🇪', name:'Ireland', dial:'+353' },
+    { flag:'🇮🇱', name:'Israel', dial:'+972' },
+    { flag:'🇮🇹', name:'Italy', dial:'+39' },
+    { flag:'🇯🇵', name:'Japan', dial:'+81' },
+    { flag:'🇲🇾', name:'Malaysia', dial:'+60' },
+    { flag:'🇲🇽', name:'Mexico', dial:'+52' },
+    { flag:'🇳🇱', name:'Netherlands', dial:'+31' },
+    { flag:'🇳🇿', name:'New Zealand', dial:'+64' },
+    { flag:'🇳🇬', name:'Nigeria', dial:'+234' },
+    { flag:'🇳🇴', name:'Norway', dial:'+47' },
+    { flag:'🇵🇰', name:'Pakistan', dial:'+92' },
+    { flag:'🇵🇭', name:'Philippines', dial:'+63' },
+    { flag:'🇵🇱', name:'Poland', dial:'+48' },
+    { flag:'🇵🇹', name:'Portugal', dial:'+351' },
+    { flag:'🇷🇴', name:'Romania', dial:'+40' },
+    { flag:'🇷🇺', name:'Russia', dial:'+7' },
+    { flag:'🇸🇦', name:'Saudi Arabia', dial:'+966' },
+    { flag:'🇸🇬', name:'Singapore', dial:'+65' },
+    { flag:'🇿🇦', name:'South Africa', dial:'+27' },
+    { flag:'🇰🇷', name:'South Korea', dial:'+82' },
+    { flag:'🇪🇸', name:'Spain', dial:'+34' },
+    { flag:'🇸🇪', name:'Sweden', dial:'+46' },
+    { flag:'🇨🇭', name:'Switzerland', dial:'+41' },
+    { flag:'🇹🇼', name:'Taiwan', dial:'+886' },
+    { flag:'🇹🇭', name:'Thailand', dial:'+66' },
+    { flag:'🇹🇷', name:'Turkey', dial:'+90' },
+    { flag:'🇦🇪', name:'UAE', dial:'+971' },
+    { flag:'🇬🇧', name:'United Kingdom', dial:'+44' },
+    { flag:'🇺🇸', name:'United States', dial:'+1' },
+    { flag:'🇻🇳', name:'Vietnam', dial:'+84' },
+  ];
+
   const otpModal = document.getElementById('otp-modal');
   let otpCode = '';
   let otpContact = '';
+  let otpTimerInterval = null;
+  let otpMode = 'phone'; // 'phone' | 'email'
+  let selectedCountry = COUNTRIES.find(c => c.name === 'United States');
+
+  // Country picker
+  function renderCountryList(filter = '') {
+    const list = document.getElementById('otp-country-list');
+    list.innerHTML = '';
+    const lower = filter.toLowerCase();
+    COUNTRIES.filter(c => !lower || c.name.toLowerCase().includes(lower) || c.dial.includes(lower)).forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'otp-country-item' + (c === selectedCountry ? ' active' : '');
+      el.innerHTML = `<span class="otp-country-item-flag">${c.flag}</span><span class="otp-country-item-name">${c.name}</span><span class="otp-country-item-dial">${c.dial}</span>`;
+      el.addEventListener('click', () => {
+        selectedCountry = c;
+        document.getElementById('otp-flag').textContent = c.flag;
+        document.getElementById('otp-dial').textContent = c.dial;
+        closeCountryDropdown();
+        document.getElementById('otp-phone-input').focus();
+      });
+      list.appendChild(el);
+    });
+  }
+
+  function openCountryDropdown() {
+    document.getElementById('otp-country-dropdown').classList.add('open');
+    document.getElementById('otp-country-search').value = '';
+    renderCountryList();
+    setTimeout(() => document.getElementById('otp-country-search').focus(), 100);
+  }
+
+  function closeCountryDropdown() {
+    document.getElementById('otp-country-dropdown').classList.remove('open');
+  }
+
+  document.getElementById('otp-country-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    const dd = document.getElementById('otp-country-dropdown');
+    dd.classList.contains('open') ? closeCountryDropdown() : openCountryDropdown();
+  });
+
+  document.getElementById('otp-country-search').addEventListener('input', e => {
+    renderCountryList(e.target.value);
+  });
+
+  document.addEventListener('click', e => {
+    const dd = document.getElementById('otp-country-dropdown');
+    if (dd.classList.contains('open') && !dd.contains(e.target) && e.target.id !== 'otp-country-btn') {
+      closeCountryDropdown();
+    }
+  });
+
+  // Phone / Email tabs
+  document.getElementById('otp-tab-phone').addEventListener('click', () => {
+    otpMode = 'phone';
+    document.getElementById('otp-tab-phone').classList.add('active');
+    document.getElementById('otp-tab-email').classList.remove('active');
+    document.getElementById('otp-phone-wrap').style.display = '';
+    document.getElementById('otp-email-wrap').style.display = 'none';
+    setTimeout(() => document.getElementById('otp-phone-input').focus(), 100);
+  });
+
+  document.getElementById('otp-tab-email').addEventListener('click', () => {
+    otpMode = 'email';
+    document.getElementById('otp-tab-email').classList.add('active');
+    document.getElementById('otp-tab-phone').classList.remove('active');
+    document.getElementById('otp-email-wrap').style.display = '';
+    document.getElementById('otp-phone-wrap').style.display = 'none';
+    setTimeout(() => document.getElementById('otp-email-input').focus(), 100);
+  });
 
   function otpShowStep(n) {
     document.querySelectorAll('#otp-modal .apple-sheet-step').forEach(s => s.classList.remove('active'));
@@ -1438,14 +1729,45 @@
   }
 
   function openOtpModal() {
-    document.getElementById('otp-contact-input').value = '';
+    otpMode = 'phone';
+    document.getElementById('otp-tab-phone').classList.add('active');
+    document.getElementById('otp-tab-email').classList.remove('active');
+    document.getElementById('otp-phone-wrap').style.display = '';
+    document.getElementById('otp-email-wrap').style.display = 'none';
+    document.getElementById('otp-phone-input').value = '';
+    document.getElementById('otp-email-input').value = '';
     otpShowStep(1);
     otpModal.classList.add('open');
-    setTimeout(() => document.getElementById('otp-contact-input').focus(), 300);
+    setTimeout(() => document.getElementById('otp-phone-input').focus(), 350);
   }
 
   function closeOtpModal() {
     otpModal.classList.remove('open');
+    clearInterval(otpTimerInterval);
+  }
+
+  function startOtpTimer() {
+    clearInterval(otpTimerInterval);
+    let secs = 120;
+    const timerEl = document.getElementById('otp-timer');
+    const resendBtn = document.getElementById('otp-resend-btn');
+    resendBtn.disabled = true;
+    timerEl.classList.remove('expired');
+
+    function tick() {
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      if (secs <= 0) {
+        clearInterval(otpTimerInterval);
+        timerEl.textContent = 'expired';
+        timerEl.classList.add('expired');
+        resendBtn.disabled = false;
+      }
+      secs--;
+    }
+    tick();
+    otpTimerInterval = setInterval(tick, 1000);
   }
 
   function renderOtpBoxes() {
@@ -1457,12 +1779,10 @@
       inp.inputMode = 'numeric';
       inp.maxLength = 1;
       inp.className = 'otp-digit';
-      inp.dataset.index = i;
       inp.addEventListener('input', e => {
         const val = e.target.value.replace(/\D/g, '');
         e.target.value = val;
         if (val && i < 5) container.children[i + 1].focus();
-        // Auto-verify when last box filled
         if (i === 5 && val) document.getElementById('otp-verify-btn').click();
       });
       inp.addEventListener('keydown', e => {
@@ -1473,47 +1793,41 @@
         const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
         [...pasted].forEach((ch, idx) => { if (container.children[idx]) container.children[idx].value = ch; });
         const next = Math.min(pasted.length, 5);
-        container.children[next].focus();
+        if (container.children[next]) container.children[next].focus();
+        if (pasted.length === 6) setTimeout(() => document.getElementById('otp-verify-btn').click(), 50);
       });
       container.appendChild(inp);
     }
   }
 
-  function showToast(msg) {
-    let t = document.getElementById('otp-toast');
-    if (!t) {
-      t = document.createElement('div');
-      t.id = 'otp-toast';
-      Object.assign(t.style, {
-        position:'fixed', bottom:'90px', left:'50%', transform:'translateX(-50%)',
-        background:'#0a84ff', color:'#fff', padding:'10px 20px', borderRadius:'20px',
-        fontSize:'0.85rem', fontWeight:'600', zIndex:'9999', opacity:'0',
-        transition:'opacity 0.3s', pointerEvents:'none', whiteSpace:'nowrap'
-      });
-      document.body.appendChild(t);
-    }
-    t.textContent = msg;
-    t.style.opacity = '1';
-    setTimeout(() => { t.style.opacity = '0'; }, 3000);
-  }
-
   function sendOtpCode() {
-    otpContact = document.getElementById('otp-contact-input').value.trim();
-    if (!otpContact) { document.getElementById('otp-contact-input').focus(); return; }
+    let contact = '';
+    if (otpMode === 'phone') {
+      const num = document.getElementById('otp-phone-input').value.trim();
+      if (!num) { document.getElementById('otp-phone-input').focus(); return; }
+      contact = selectedCountry.dial + ' ' + num;
+    } else {
+      contact = document.getElementById('otp-email-input').value.trim();
+      if (!contact) { document.getElementById('otp-email-input').focus(); return; }
+    }
+    otpContact = contact;
     otpCode = String(Math.floor(100000 + Math.random() * 900000));
     renderOtpBoxes();
     document.getElementById('otp-sent-label').textContent = `Code sent to ${otpContact}`;
     otpShowStep(2);
+    startOtpTimer();
     setTimeout(() => document.getElementById('otp-boxes').children[0]?.focus(), 300);
     showToast(`Your code: ${otpCode}`);
   }
 
   document.getElementById('otp-send-btn').addEventListener('click', sendOtpCode);
-  document.getElementById('otp-contact-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtpCode(); });
+  document.getElementById('otp-phone-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtpCode(); });
+  document.getElementById('otp-email-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtpCode(); });
 
   document.getElementById('otp-resend-btn').addEventListener('click', () => {
     otpCode = String(Math.floor(100000 + Math.random() * 900000));
     renderOtpBoxes();
+    startOtpTimer();
     setTimeout(() => document.getElementById('otp-boxes').children[0]?.focus(), 100);
     showToast(`New code: ${otpCode}`);
   });
@@ -1527,6 +1841,7 @@
       showToast('Incorrect code — try again');
       return;
     }
+    clearInterval(otpTimerInterval);
     closeOtpModal();
     const users = JSON.parse(localStorage.getItem('ghostpin_users') || '{}');
     if (!users[otpContact]) { users[otpContact] = { password: '' }; localStorage.setItem('ghostpin_users', JSON.stringify(users)); }
@@ -1535,7 +1850,7 @@
   });
 
   document.getElementById('otp-cancel-btn').addEventListener('click', closeOtpModal);
-  document.getElementById('otp-back-btn').addEventListener('click', () => otpShowStep(1));
+  document.getElementById('otp-back-btn').addEventListener('click', () => { clearInterval(otpTimerInterval); otpShowStep(1); });
   otpModal.addEventListener('click', e => { if (e.target === otpModal) closeOtpModal(); });
 
   document.getElementById('otp-open-login').addEventListener('click', openOtpModal);
